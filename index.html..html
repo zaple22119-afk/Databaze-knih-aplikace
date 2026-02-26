@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Knihovna</title>
+    <style>
+        /* --- MODERNÍ PROMĚNNÉ A ZÁKLAD --- */
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-color: #f3f4f6;
+            --surface: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-light: 1px solid #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body { display: flex; height: 100vh; background-color: var(--bg-color); color: var(--text-main); overflow: hidden; }
+
+        /* --- PŘIHLAŠOVACÍ OBRAZOVKA --- */
+        #loginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); display: flex; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .login-box {
+            background: var(--surface); padding: 40px; border-radius: 16px; box-shadow: var(--shadow-hover);
+            width: 400px; text-align: center;
+        }
+        .login-box h1 { margin-bottom: 20px; font-size: 24px; color: var(--primary); }
+        .login-box input {
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d5db; border-radius: 8px; outline: none;
+        }
+        .login-box button {
+            width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px;
+        }
+        .login-box button:hover { background: var(--primary-hover); }
+        .login-box .btn-secondary { background: #e5e7eb; color: var(--text-main); }
+        .login-box .btn-secondary:hover { background: #d1d5db; }
+        .error-msg { color: #ef4444; font-size: 14px; margin-bottom: 15px; display: none; }
+
+        /* --- HLAVNÍ APLIKACE (SKRYTÁ DO PŘIHLÁŠENÍ) --- */
+        #appScreen { display: none; width: 100%; height: 100%; }
+
+        /* --- LEVÉ MENU --- */
+        .sidebar {
+            width: 260px; background-color: var(--surface); border-right: var(--border-light);
+            padding: 30px 20px; display: flex; flex-direction: column; z-index: 10;
+        }
+        .sidebar h2 { font-size: 20px; font-weight: 800; margin-bottom: 30px; color: var(--primary); text-transform: uppercase; }
+        .sidebar ul { list-style: none; }
+        .sidebar li {
+            font-size: 15px; font-weight: 500; padding: 12px 15px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; color: var(--text-muted); transition: 0.2s;
+        }
+        .sidebar li:hover { background-color: #f3f4f6; color: var(--text-main); }
+        .sidebar li.active { background-color: #eef2ff; color: var(--primary); font-weight: 600; }
+        
+        .user-info { margin-top: auto; padding-top: 20px; border-top: var(--border-light); text-align: center; font-size: 14px; color: var(--text-muted); margin-bottom: 15px;}
+        .logout-btn { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; }
+        .logout-btn:hover { background: #dc2626; }
+        .add-btn { background-color: var(--primary); color: white !important; text-align: center; font-weight: 600; box-shadow: var(--shadow-sm); margin-bottom: 15px; }
+        .add-btn:hover { background-color: var(--primary-hover) !important; }
+
+        /* --- HLAVNÍ OBSAH --- */
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        h1 { font-size: 32px; font-weight: 800; color: var(--text-main); }
+        .search-bar { width: 350px; padding: 12px 20px; border: 1px solid #d1d5db; border-radius: 20px; background-color: var(--surface); outline: none; box-shadow: var(--shadow-sm); }
+        .search-bar:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
+        /* --- MŘÍŽKA KNIH --- */
+        .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 25px; padding-bottom: 40px; }
+        .book-card { background-color: var(--surface); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-md); cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; }
+        .book-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+        .book-cover { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; text-align: center; padding: 10px; }
+        .book-info { padding: 15px 12px; }
+        .book-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
+        .book-author { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .book-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; }
+        .badge { font-size: 10px; padding: 3px 6px; border-radius: 10px; font-weight: 600; text-transform: uppercase; }
+        .badge-physical { background-color: #fce7f3; color: #db2777; }
+        .badge-ebook { background-color: #dcfce7; color: #16a34a; }
+        .badge-genre { background-color: #e0e7ff; color: #4338ca; }
+        .badge-lang { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db;}
+
+        /* --- PRAVÝ PANEL --- */
+        .right-panel { width: 280px; background-color: var(--surface); border-left: var(--border-light); padding: 30px 20px; overflow-y: auto; }
+        .right-panel h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; }
+        .filter-list { list-style: none; }
+        .filter-list li { font-size: 14px; padding: 8px 10px; cursor: pointer; border-radius: 6px; color: var(--text-main); transition: 0.2s; }
+        .filter-list li:hover { background-color: #f3f4f6; }
+
+        /* --- MODÁLNÍ OKNO --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: var(--surface); padding: 30px; border-radius: 16px; width: 500px; max-width: 90%; box-shadow: var(--shadow-hover); max-height: 90vh; overflow-y: auto; }
+        .modal h2 { margin-bottom: 20px; color: var(--text-main); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-main); }
+        .form-group input[type="text"], .form-group input[type="url"], .form-group input[type="number"], .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; }
+        .checkbox-group { max-height: 120px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .checkbox-group label { font-size: 14px; display: flex; align-items: center; cursor: pointer; }
+        .checkbox-group input { margin-right: 8px; cursor: pointer; }
+        .btn-group { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-submit { background: var(--primary); color: #fff; padding: 12px; border: none; border-radius: 8px; cursor: pointer; flex: 1; font-weight: 600; }
+        .btn-close { background: #e5e7eb; color: var(--text-main); padding: 12px; border: none; border-radius: 8px; cursor: pointer; flex: 1; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1>Knihovna Login</h1>
+            <div id="loginError" class="error-msg">Špatné jméno nebo heslo.</div>
+            <input type="text" id="usernameInput" placeholder="Uživatelské jméno">
+            <input type="password" id="passwordInput" placeholder="Heslo">
+            <button onclick="login()">Přihlásit se</button>
+            <button class="btn-secondary" onclick="register()">Vytvořit nový účet</button>
+        </div>
+    </div>
+
+    <div id="appScreen">
+        <aside class="sidebar">
+            <h2>Knihovna</h2>
+            <ul id="menuList">
+                <li class="active" onclick="setActiveMenu(this); renderBooks()">Hlavní stránka</li>
+                <li onclick="setActiveMenu(this); filterByOwnership('Vlastní')">Moje knihy</li>
+                <li onclick="setActiveMenu(this); filterByReadingStatus('Dočteno')">Přečtené</li>
+                <li onclick="setActiveMenu(this); filterByOwnership('Půjčeno (cizí)')">Půjčené</li>
+                <li onclick="setActiveMenu(this); filterWishlist()">Wishlist</li>
+            </ul>
+            
+            <div style="margin-top: auto;">
+                <div class="add-btn" style="padding: 12px; border-radius: 8px; cursor: pointer;" onclick="openModal()">+ Přidat knihu</div>
+                <div class="user-info">Přihlášen: <strong id="loggedUserName"></strong></div>
+                <div class="logout-btn" onclick="logout()">Odhlásit se</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-top">
+                <h1 id="pageTitle">Všechny knihy</h1>
+                <input type="text" id="searchInput" class="search-bar" placeholder="Hledat podle názvu nebo autora..." onkeyup="searchBooks()">
+            </div>
+            <div class="books-grid" id="booksGrid"></div>
+        </main>
+
+        <aside class="right-panel">
+            <h3>Formát</h3>
+            <ul class="filter-list">
+                <li onclick="filterByFormat('Fyzická')">Fyzická kniha</li>
+                <li onclick="filterByFormat('E-book')">E-book</li>
+            </ul>
+            <h3>Jazyk</h3>
+            <ul class="filter-list" id="languageList"></ul>
+            <h3>Žánry</h3>
+            <ul class="filter-list" id="genreList"></ul>
+            <h3>Stav čtení</h3>
+            <ul class="filter-list">
+                <li onclick="filterByReadingStatus('Ve čtení')">Rozečteno</li>
+                <li onclick="filterByReadingStatus('Dočteno')">Přečteno</li>
+                <li onclick="filterByReadingStatus('Nepřečteno')">Nepřečteno</li>
+            </ul>
+        </aside>
+    </div>
+
+    <div class="modal-overlay" id="bookModal">
+        <div class="modal">
+            <h2 id="modalTitle">Nová kniha</h2>
+            <form id="bookForm" onsubmit="saveBook(event)">
+                <input type="hidden" id="bookId">
+                <div class="form-group">
+                    <label>Název knihy</label>
+                    <input type="text" id="bTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Autor</label>
+                    <input type="text" id="bAuthor" list="authorDatalist" required>
+                    <datalist id="authorDatalist"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>URL obrázku obálky (volitelné)</label>
+                    <input type="url" id="bCover">
+                </div>
+                <div class="form-group">
+                    <label>Jazyk knihy</label>
+                    <select id="bLanguage">
+                        <option value="Čeština">Čeština</option>
+                        <option value="Slovenština">Slovenština</option>
+                        <option value="Angličtina">Angličtina</option>
+                        <option value="Němčina">Němčina</option>
+                        <option value="Jiné">Jiné</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Žánry (lze vybrat více)</label>
+                    <div class="checkbox-group" id="bGenresContainer"></div>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Formát</label>
+                        <select id="bFormat">
+                            <option value="Fyzická">Fyzická kniha</option>
+                            <option value="E-book">E-book</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Stav čtení</label>
+                        <select id="bReadStatus">
+                            <option value="Nepřečteno">Nepřečteno</option>
+                            <option value="Ve čtení">Rozečteno</option>
+                            <option value="Dočteno">Dočteno</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Vlastnictví</label>
+                    <select id="bOwnership">
+                        <option value="Vlastní">Vlastním</option>
+                        <option value="Půjčeno (cizí)">Mám půjčeno</option>
+                        <option value="Půjčeno (jiným)">Půjčil jsem</option>
+                        <option value="Wishlist">Wishlist</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Hodnocení (1-5)</label>
+                    <input type="number" id="bRating" min="1" max="5">
+                </div>
+                
+                <div class="form-group" id="deleteBtnContainer" style="display:none; text-align:right;">
+                    <a href="#" style="color:#ef4444; font-size:13px; text-decoration:none;" onclick="deleteBook()">🗑️ Smazat tuto knihu</a>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn-close" onclick="closeModal()">Zrušit</button>
+                    <button type="submit" class="btn-submit">Uložit knihu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- SYSTÉMOVÁ DATA ---
+        const defaultGenres = ["Beletrie", "Sci-fi", "Fantasy", "Detektivka", "Thriller", "Horor", "Romantika", "Historický román", "Odborná literatura", "Osobní rozvoj", "Biografie", "Poezie", "Komiks / Manga", "Klasika"];
+        
+        // --- STAV APLIKACE ---
+        let users = []; // Formát: { username: 'test', password: '123' }
+        let allBooks = []; // Všechny knihy všech uživatelů
+        let currentUser = null; // Kdo je zrovna přihlášený
+
+        // --- INICIALIZACE A NAČTÁNÍ Z LOCALSTORAGE ---
+        function loadData() {
+            const savedUsers = localStorage.getItem('library_users');
+            const savedBooks = localStorage.getItem('library_books');
+            const savedSession = localStorage.getItem('library_session');
+
+            if (savedUsers) users = JSON.parse(savedUsers);
+            if (savedBooks) allBooks = JSON.parse(savedBooks);
+
+            initGenresCheckbox();
+
+            if (savedSession) {
+                currentUser = savedSession;
+                showApp();
+            } else {
+                showLogin();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('library_users', JSON.stringify(users));
+            localStorage.setItem('library_books', JSON.stringify(allBooks));
+        }
+
+        // --- PŘIHLAŠOVÁNÍ ---
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appScreen').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appScreen').style.display = 'flex';
+            document.getElementById('loggedUserName').innerText = currentUser;
+            renderBooks();
+        }
+
+        function login() {
+            const u = document.getElementById('usernameInput').value.trim();
+            const p = document.getElementById('passwordInput').value;
+            const errorLabel = document.getElementById('loginError');
+
+            const userFound = users.find(user => user.username === u && user.password === p);
+            
+            if (userFound) {
+                currentUser = u;
+                localStorage.setItem('library_session', u);
+                errorLabel.style.display = 'none';
+                document.getElementById('usernameInput').value = '';
+                document.getElementById('passwordInput').value = '';
+                showApp();
+            } else {
+                errorLabel.innerText = "Špatné jméno nebo heslo.";
+                errorLabel.style.display = 'block';
+            }
+        }
+
+        function register() {
+            const u = document.getElementById('usernameInput').value.trim();
+            const p = document.getElementById('passwordInput').value;
+            const errorLabel = document.getElementById('loginError');
+
+            if (u.length < 3 || p.length < 3) {
+                errorLabel.innerText = "Jméno i heslo musí mít alespoň 3 znaky.";
+                errorLabel.style.display = 'block';
+                return;
+            }
+
+            if (users.find(user => user.username === u)) {
+                errorLabel.innerText = "Tento uživatel už existuje.";
+                errorLabel.style.display = 'block';
+                return;
+            }
+
+            // Vytvoření uživatele
+            users.push({ username: u, password: p });
+            saveData();
+            
+            // Rovnou přihlásit
+            currentUser = u;
+            localStorage.setItem('library_session', u);
+            errorLabel.style.display = 'none';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            showApp();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('library_session');
+            showLogin();
+        }
+
+        // --- ZÍSKÁNÍ KNIH AKTUÁLNÍHO UŽIVATELE ---
+        function getUserBooks() {
+            return allBooks.filter(b => b.owner === currentUser);
+        }
+
+        function initGenresCheckbox() {
+            const container = document.getElementById('bGenresContainer');
+            container.innerHTML = defaultGenres.map(g => `<label><input type="checkbox" value="${g}" class="genre-checkbox"> ${g}</label>`).join('');
+        }
+
+        function setActiveMenu(element) {
+            document.querySelectorAll('#menuList li').forEach(li => li.classList.remove('active'));
+            if(element) element.classList.add('active');
+            document.getElementById('pageTitle').innerText = element ? element.innerText : 'Všechny knihy';
+        }
+
+        // --- VYKRESLOVÁNÍ KNIH ---
+        function renderBooks(booksToRender = getUserBooks()) {
+            const grid = document.getElementById('booksGrid');
+            grid.innerHTML = '';
+
+            // Skrytí wishlistu na hlavní stránce
+            if(booksToRender === getUserBooks()) {
+                booksToRender = booksToRender.filter(b => b.ownership !== 'Wishlist');
+            }
+
+            booksToRender.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.onclick = () => editBook(book.id);
+                
+                let coverHtml = book.cover ? `<img src="${book.cover}" class="book-cover" alt="Obálka">` : `<div class="book-cover"><span>${book.title}</span></div>`;
+                let formatClass = book.format === 'E-book' ? 'badge-ebook' : 'badge-physical';
+                let genresHtml = (book.genres || []).map(g => `<span class="badge badge-genre">${g}</span>`).join('');
+
+                card.innerHTML = `
+                    ${coverHtml}
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">${book.author}</div>
+                        <div class="book-badges">
+                            <span class="badge ${formatClass}">${book.format}</span>
+                            <span class="badge badge-lang">🌐 ${book.language || 'Neznámo'}</span>
+                            ${book.readStatus === 'Dočteno' ? '<span class="badge" style="background:#fef08a; color:#854d0e;">⭐ ' + (book.rating || '-') + '</span>' : ''}
+                        </div>
+                        <div class="book-badges" style="margin-top: 5px;">${genresHtml}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            updateFiltersAndAuthors();
+        }
+
+        // --- FILTRY ---
+        function searchBooks() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = getUserBooks().filter(b => b.title.toLowerCase().includes(query) || b.author.toLowerCase().includes(query));
+            renderBooks(filtered);
+        }
+
+        function filterByFormat(format) { renderBooks(getUserBooks().filter(b => b.format === format)); }
+        function filterByReadingStatus(status) { renderBooks(getUserBooks().filter(b => b.readStatus === status)); }
+        function filterByOwnership(status) { renderBooks(getUserBooks().filter(b => b.ownership === status)); }
+        function filterWishlist() { renderBooks(getUserBooks().filter(b => b.ownership === 'Wishlist')); }
+        function filterByGenre(genre) { renderBooks(getUserBooks().filter(b => b.genres && b.genres.includes(genre))); }
+        function filterByLanguage(lang) { renderBooks(getUserBooks().filter(b => b.language === lang)); }
+
+        function updateFiltersAndAuthors() {
+            const userBooks = getUserBooks();
+            
+            let allGenres = [];
+            userBooks.forEach(b => { if(b.genres) allGenres.push(...b.genres); });
+            const uniqueGenres = [...new Set(allGenres)].sort();
+            document.getElementById('genreList').innerHTML = uniqueGenres.map(g => `<li onclick="filterByGenre('${g}')">${g}</li>`).join('');
+
+            const uniqueLangs = [...new Set(userBooks.map(b => b.language).filter(Boolean))].sort();
+            document.getElementById('languageList').innerHTML = uniqueLangs.map(l => `<li onclick="filterByLanguage('${l}')">${l}</li>`).join('');
+
+            const authors = [...new Set(userBooks.map(b => b.author))].sort();
+            document.getElementById('authorDatalist').innerHTML = authors.map(a => `<option value="${a}">`).join('');
+        }
+
+        // --- MODÁLNÍ OKNO A FORMULÁŘ ---
+        function openModal() {
+            document.getElementById('bookForm').reset();
+            document.getElementById('bookId').value = '';
+            document.getElementById('modalTitle').innerText = 'Přidat novou knihu';
+            document.getElementById('deleteBtnContainer').style.display = 'none';
+            document.querySelectorAll('.genre-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('bookModal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('bookModal').style.display = 'none'; }
+
+        function editBook(id) {
+            const book = getUserBooks().find(b => b.id === id);
+            if(!book) return;
+
+            document.getElementById('bookId').value = book.id;
+            document.getElementById('bTitle').value = book.title;
+            document.getElementById('bAuthor').value = book.author;
+            document.getElementById('bCover').value = book.cover || '';
+            document.getElementById('bLanguage').value = book.language || 'Čeština';
+            document.getElementById('bFormat').value = book.format;
+            document.getElementById('bOwnership').value = book.ownership;
+            document.getElementById('bReadStatus').value = book.readStatus;
+            document.getElementById('bRating').value = book.rating || '';
+            
+            document.querySelectorAll('.genre-checkbox').forEach(cb => { cb.checked = (book.genres || []).includes(cb.value); });
+            
+            document.getElementById('modalTitle').innerText = 'Upravit knihu';
+            document.getElementById('deleteBtnContainer').style.display = 'block'; // Zobrazí tlačítko smazat
+            document.getElementById('bookModal').style.display = 'flex';
+        }
+
+        function saveBook(e) {
+            e.preventDefault();
+            const id = document.getElementById('bookId').value;
+            const selectedGenres = Array.from(document.querySelectorAll('.genre-checkbox:checked')).map(cb => cb.value);
+
+            const bookData = {
+                owner: currentUser, // Prirazeni knihy prihlasenemu uzivateli
+                title: document.getElementById('bTitle').value,
+                author: document.getElementById('bAuthor').value,
+                cover: document.getElementById('bCover').value,
+                language: document.getElementById('bLanguage').value,
+                genres: selectedGenres,
+                format: document.getElementById('bFormat').value,
+                ownership: document.getElementById('bOwnership').value,
+                readStatus: document.getElementById('bReadStatus').value,
+                rating: document.getElementById('bRating').value
+            };
+
+            if (id) {
+                const index = allBooks.findIndex(b => b.id == id);
+                allBooks[index] = { ...allBooks[index], ...bookData };
+            } else {
+                bookData.id = Date.now();
+                allBooks.push(bookData);
+            }
+
+            saveData(); // Uložení do prohlížeče
+            closeModal();
+            setActiveMenu(document.querySelector('#menuList li:first-child'));
+            renderBooks();
+        }
+
+        function deleteBook() {
+            const id = document.getElementById('bookId').value;
+            if(confirm('Opravdu chcete tuto knihu smazat?')) {
+                allBooks = allBooks.filter(b => b.id != id);
+                saveData();
+                closeModal();
+                renderBooks();
+            }
+        }
+
+        // Start aplikace
+        window.onload = loadData;
+    </script>
+</body>
+</html>
